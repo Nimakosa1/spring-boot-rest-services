@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import com.in28minutes.springboot.StudentApplication;
-import com.in28minutes.springboot.model.Student;
-import org.json.JSONException;
+import com.in28minutes.springboot.model.Course;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +25,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @SpringBootTest(classes = StudentApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @WithMockUser
-public class StudentControllerIT {
+public class CourseControllerIT {
 
     @LocalServerPort
     private int port;
@@ -41,64 +40,64 @@ public class StudentControllerIT {
     }
 
     @Test
-    public void testGetAllStudents() {
+    public void testGetAllCourses() {
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
         ResponseEntity<String> response = restTemplate.exchange(
-                createURLWithPort("/api/students"),
+                createURLWithPort("/api/courses"),
                 HttpMethod.GET, entity, String.class);
 
         assertEquals(200, response.getStatusCodeValue());
     }
 
     @Test
-    public void testCreateStudent() {
+    public void testCreateCourse() {
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Student student = new Student("John Doe", "john@example.com", "Computer Science");
+        Course course = new Course("Spring Boot", "Learn Spring Boot", List.of("Step 1", "Step 2"));
 
-        HttpEntity<Student> entity = new HttpEntity<>(student, headers);
+        HttpEntity<Course> entity = new HttpEntity<>(course, headers);
 
-        ResponseEntity<Student> response = restTemplate.exchange(
-                createURLWithPort("/api/students"),
-                HttpMethod.POST, entity, Student.class);
+        ResponseEntity<Course> response = restTemplate.exchange(
+                createURLWithPort("/api/courses"),
+                HttpMethod.POST, entity, Course.class);
 
         assertEquals(201, response.getStatusCodeValue());
-        assertTrue(response.getHeaders().getLocation().toString().contains("/api/students/"));
+        assertTrue(response.getHeaders().getLocation().toString().contains("/api/courses/"));
     }
 
     @Test
-    public void testGetStudentById() {
+    public void testGetCourseById() {
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
-        ResponseEntity<Student> response = restTemplate.exchange(
-                createURLWithPort("/api/students/1"),
-                HttpMethod.GET, entity, Student.class);
+        ResponseEntity<Course> response = restTemplate.exchange(
+                createURLWithPort("/api/courses/1"),
+                HttpMethod.GET, entity, Course.class);
 
         assertEquals(200, response.getStatusCodeValue());
     }
 
     @Test
-    public void testUpdateStudent() {
+    public void testUpdateCourse() {
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Student student = new Student("John Doe Updated", "john@example.com", "Physics");
+        Course course = new Course("Spring Boot Updated", "Learn Spring Boot Updated", List.of("Step 1", "Step 2"));
 
-        HttpEntity<Student> entity = new HttpEntity<>(student, headers);
+        HttpEntity<Course> entity = new HttpEntity<>(course, headers);
 
-        ResponseEntity<Student> response = restTemplate.exchange(
-                createURLWithPort("/api/students/1"),
-                HttpMethod.PUT, entity, Student.class);
+        ResponseEntity<Course> response = restTemplate.exchange(
+                createURLWithPort("/api/courses/1"),
+                HttpMethod.PUT, entity, Course.class);
 
         assertEquals(200, response.getStatusCodeValue());
     }
 
     @Test
-    public void testDeleteStudent() {
+    public void testDeleteCourse() {
         HttpEntity<String> entity = new HttpEntity<>(null, headers);
 
         ResponseEntity<Void> response = restTemplate.exchange(
-                createURLWithPort("/api/students/1"),
+                createURLWithPort("/api/courses/1"),
                 HttpMethod.DELETE, entity, Void.class);
 
         assertEquals(200, response.getStatusCodeValue());
@@ -107,4 +106,4 @@ public class StudentControllerIT {
     private String createURLWithPort(String uri) {
         return "http://localhost:" + port + uri;
     }
-}
+} 

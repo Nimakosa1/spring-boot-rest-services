@@ -5,51 +5,54 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import com.in28minutes.springboot.model.Course;
+import com.in28minutes.springboot.model.Student;
 import com.in28minutes.springboot.service.StudentService;
 
+import jakarta.validation.Valid;
+
 @RestController
-@RequestMapping("/students/{studentId}/courses")
+@RequestMapping("/api/students")
 public class StudentController {
 
     @Autowired
     private StudentService studentService;
 
-    @GetMapping()
-    public List<Course> retrieveCoursesForStudent(@PathVariable String studentId) {
-        return studentService.retrieveCourses(studentId);
+    @GetMapping
+    public List<Student> getAllStudents() {
+        return studentService.getAllStudents();
     }
 
-    @PostMapping()
-    public ResponseEntity<Void> registerStudentForCourse(@PathVariable String studentId,
-                                                         @RequestBody Course newCourse) {
+    @GetMapping("/{id}")
+    public ResponseEntity<Student> getStudentById(@PathVariable Long id) {
+        return studentService.getStudentById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-        Course course = studentService.addCourse(studentId, newCourse);
-
-        if (course == null)
-            return ResponseEntity.noContent().build();
-
+    @PostMapping
+    public ResponseEntity<Student> createStudent(@Valid @RequestBody Student student) {
+        Student savedStudent = studentService.createStudent(student);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(course.id())
+                .buildAndExpand(savedStudent.getId())
                 .toUri();
-
-        return ResponseEntity.created(location).build();
+        return ResponseEntity.created(location).body(savedStudent);
     }
 
-    @GetMapping("/{courseId}")
-    public Course retrieveDetailsForCourse(@PathVariable String studentId,
-                                           @PathVariable String courseId) {
-
-        return studentService.retrieveCourse(studentId, courseId);
+    @PutMapping("/{id}")
+    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @Valid @RequestBody Student student) {
+        return studentService.updateStudent(id, student)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
+        return studentService.deleteStudent(id)
+                ? ResponseEntity.ok().<Void>build()
+                : ResponseEntity.notFound().build();
+    }
 }

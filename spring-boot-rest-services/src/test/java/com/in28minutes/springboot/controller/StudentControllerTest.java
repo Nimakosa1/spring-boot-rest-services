@@ -1,32 +1,29 @@
 package com.in28minutes.springboot.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Optional;
 
-import com.in28minutes.springboot.model.Course;
+import com.in28minutes.springboot.model.Student;
 import com.in28minutes.springboot.service.StudentService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
-import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(SpringExtension.class)
-@WebMvcTest(value = StudentController.class)
+@WebMvcTest(StudentController.class)
 @WithMockUser
 public class StudentControllerTest {
 
@@ -36,52 +33,64 @@ public class StudentControllerTest {
     @MockBean
     private StudentService studentService;
 
-    Course mockCourse = new Course("Course1", "Spring", "10Steps",
-            List.of("Learn Maven", "Import Project", "First Example", "Second Example"));
-
-    String exampleCourseJson = "{\"name\":\"Spring\",\"description\":\"10Steps\",\"steps\":[\"Learn Maven\",\"Import Project\",\"First Example\",\"Second Example\"]}";
-
     @Test
-    public void retrieveDetailsForCourse() throws Exception {
+    public void getAllStudents_ShouldReturnList() throws Exception {
+        Student student1 = new Student("John Doe", "john@example.com", "Computer Science");
+        Student student2 = new Student("Jane Doe", "jane@example.com", "Mathematics");
 
-        Mockito.when(studentService.retrieveCourse(Mockito.anyString(), Mockito.anyString())).thenReturn(mockCourse);
+        when(studentService.getAllStudents()).thenReturn(Arrays.asList(student1, student2));
 
-        RequestBuilder requestBuilder = MockMvcRequestBuilders.get(
-                "/students/Student1/courses/Course1").accept(
-                MediaType.APPLICATION_JSON);
-
-        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
-
-        System.out.println(result.getResponse());
-        String expected = "{id:Course1,name:Spring,description:10Steps}";
-
-        // {"id":"Course1","name":"Spring","description":"10 Steps, 25 Examples and 10K Students","steps":["Learn Maven","Import Project","First Example","Second Example"]}
-
-        JSONAssert.assertEquals(expected, result.getResponse().getContentAsString(), false);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/students")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("John Doe"))
+                .andExpect(jsonPath("$[1].name").value("Jane Doe"));
     }
 
     @Test
-    public void createStudentCourse() throws Exception {
-        Course mockCourse = new Course("1", "Smallest Number", "1", List.of("1", "2", "3", "4"));
+    public void getStudentById_ShouldReturnStudent() throws Exception {
+        Student student = new Student("John Doe", "john@example.com", "Computer Science");
+        when(studentService.getStudentById(1L)).thenReturn(Optional.of(student));
 
-        // studentService.addCourse to respond back with mockCourse
-        Mockito.when(studentService.addCourse(Mockito.anyString(), Mockito.any(Course.class))).thenReturn(mockCourse);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/students/1")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("John Doe"));
+    }
 
-        // Send course as body to /students/Student1/courses
-        RequestBuilder requestBuilder = MockMvcRequestBuilders.post(
-                        "/students/Student1/courses")
+    @Test
+    public void createStudent_ShouldReturnCreated() throws Exception {
+        Student student = new Student("John Doe", "john@example.com", "Computer Science");
+        when(studentService.createStudent(any(Student.class))).thenReturn(student);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/students")
                 .with(csrf())
-                .accept(MediaType.APPLICATION_JSON).content(exampleCourseJson)
-                .contentType(MediaType.APPLICATION_JSON);
-
-        MvcResult result = mockMvc.perform(requestBuilder).andReturn();
-
-        MockHttpServletResponse response = result.getResponse();
-
-        assertEquals(HttpStatus.CREATED.value(), response.getStatus());
-
-        assertEquals("http://localhost/students/Student1/courses/1", response.getHeader(HttpHeaders.LOCATION));
-
+                .content("{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"major\":\"Computer Science\"}")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("John Doe"));
     }
 
+    @Test
+    public void updateStudent_ShouldReturnUpdated() throws Exception {
+        Student student = new Student("John Doe Updated", "john@example.com", "Physics");
+        when(studentService.updateStudent(any(Long.class), any(Student.class)))
+                .thenReturn(Optional.of(student));
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/students/1")
+                .with(csrf())
+                .content("{\"name\":\"John Doe Updated\",\"email\":\"john@example.com\",\"major\":\"Physics\"}")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("John Doe Updated"));
+    }
+
+    @Test
+    public void deleteStudent_ShouldReturnNoContent() throws Exception {
+        when(studentService.deleteStudent(1L)).thenReturn(true);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/students/1")
+                .with(csrf()))
+                .andExpect(status().isOk());
+    }
 }
